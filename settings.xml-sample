@@ -1,0 +1,45 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <localRepository />
+    <interactiveMode />
+    <offline />
+
+  <pluginGroups>
+    <pluginGroup>com.epsilon777</pluginGroup>
+    <pluginGroup>io.spring.javaformat</pluginGroup>
+  </pluginGroups>
+
+    <servers />
+    <mirrors />
+    <proxies />
+    <profiles>
+        <profile>
+            <id>commonprofile</id>
+            <activation>
+                <!-- do not use activeByDefault option, if a profile is set on the command line, and
+                it will, the profile activated by default is skipped, prefer this way-->
+                <property>
+                    <name>!foobarenvironment</name>
+                </property>
+            </activation>
+            <properties>
+                <mvn.settings.profile.common.foo.bar.url>#{3DPHAwEc7soHNI4hRTa/j3ETCtfEtlK/WaKPuuwnyKBoQ+tzPirR0Okhy9QEUTgWnwl4clMkO3Iv/j29HAM+WA==}</mvn.settings.profile.common.foo.bar.url>
+                <mvn.settings.profile.common.foo.bar.password>#{+JVYSIPKcl0HPhLMBaVyo1dwbD9dJoFDRGD7y04mQzUUPccwkTxczsJl6KHVl/qE6s7mA+9Gu4DMtotLoxcaNw==}</mvn.settings.profile.common.foo.bar.password>
+            </properties>
+        </profile>
+        <profile>
+            <id>production</id>
+            <properties>
+                <mvn.settings.profile.production.foo.bar.datasource.url>#{3DPHAwEc7soHNI4hRTa/j3ETCtfEtlK/WaKPuuwnyKBoQ+tzPirR0Okhy9QEUTgWnwl4clMkO3Iv/j29HAM+WA==}</mvn.settings.profile.production.foo.bar.datasource.url>
+                <mvn.settings.profile.production.foo.bar.datasource.password>#{+JVYSIPKcl0HPhLMBaVyo1dwbD9dJoFDRGD7y04mQzUUPccwkTxczsJl6KHVl/qE6s7mA+9Gu4DMtotLoxcaNw==}</mvn.settings.profile.production.foo.bar.datasource.password>
+             </properties>
+        </profile>
+        <profile>
+            <id>development</id>
+            <properties>
+                <mvn.settings.profile.development.foo.bar.datasource.url>#{4RFig91URKkHHGmbJMYTZMsPRfsrsdndgtcMaarM5a5ArUKfJM6rbJeSmDVz+dAUotMtAzPpRJDk09GegJhmGw==}</mvn.settings.profile.development.foo.bar.datasource.url>
+                <mvn.settings.profile.development.foo.bar.datasource.password>anunsecurizedpassword</mvn.settings.profile.development.foo.bar.datasource.password>
+            </properties>
+        </profile>
+    </profiles>
+    <activeProfiles />
+</settings>
