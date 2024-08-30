@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="mvndecryptUI" />
         <module name="mvndecrypt" />
+        <module name="SampleApp" />
       </profile>
     </annotationProcessing>
   </component>

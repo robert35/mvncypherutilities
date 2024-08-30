@@ -82,19 +82,20 @@ public class CryptoMojo extends AbstractMojo {
 
 		//c'est bien le # qu'il faut regarder, il provient du fichier settings.xml
 
-		if (! toInspect.matches ( "\\#\\{.*\\}" ) ) return toInspect;
+		if (! toInspect.matches ( ".*\\#\\{.*\\}.*" ) ) return toInspect;
 
 		String res = Pattern.compile ( "\\#(\\{.*\\})" ).matcher ( toInspect ).replaceAll ( gr -> {
 			String encoded = gr.group ( 1 );
 			String decoded = decrypt ( encoded );
 			//log.info ("-----> found encoded : "+encoded);
 			//log.info ("-----> decoded is    : "+decoded);
+
 			return decoded;
 		} );
 
 		//log.info("inspecting decoded is : " + res );
-
-		return res;
+	  return res.matches ( ".*\\#\\{.*\\}.*" ) ? substituteAllTokens(res) : res;
+//		return res;
 
 	}
 /*

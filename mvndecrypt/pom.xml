@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>mvndecrypt</artifactId>
     <packaging>maven-plugin</packaging>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>${parent.version}</version>
     <name>mvndecrypt Maven Mojo from epsilon777</name>
 	<parent>
 		<groupId>com.epsilon777.mvncypherutilities</groupId>

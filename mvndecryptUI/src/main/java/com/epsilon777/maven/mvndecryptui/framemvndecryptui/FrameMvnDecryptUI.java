@@ -44,8 +44,8 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 	String decodedfileasstring="";
 
 	JTextArea settingssecurityfileeditor = new JTextArea (10, 160);
-	JTextArea encodedsettingsfileeditor = new JTextArea (30, 60);
-	JTextArea decodedsettingsfileeditor = new JTextArea (30, 100);
+	JTextArea encodedsettingsfileeditor = new JTextArea (50, 60);
+	JTextArea decodedsettingsfileeditor = new JTextArea (50, 100);
 
 	JScrollPane settingssecurityfileeditorscroll
 						= new JScrollPane( settingssecurityfileeditor,

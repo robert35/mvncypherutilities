@@ -7,7 +7,7 @@
   <description>2 modules : mvndecrypt which enable to use the</description>
   <groupId>com.epsilon777.mvncypherutilities</groupId>
   <artifactId>mvndecrypt</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.0</version>
   <goalPrefix>com.epsilon777</goalPrefix>
   <isolatedRealm>false</isolatedRealm>
   <inheritedByDefault>true</inheritedByDefault>
