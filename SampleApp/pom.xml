@@ -43,7 +43,7 @@
             <plugin>
                 <groupId>com.epsilon777.mvncypherutilities</groupId>
                 <artifactId>mvndecrypt</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
                 <executions>
                     <execution>
                         <goals>
