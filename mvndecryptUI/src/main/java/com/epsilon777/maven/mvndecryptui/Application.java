@@ -28,7 +28,7 @@ public class Application
 		log.info("Starting " + PROP.getProperty("app.finalName") + " Application...");
 		//FlatDarkLaf.setup();
 //		FlatLightLaf.setup ( );
-		FlatDarculaLaf.setup ();
+		//FlatDarculaLaf.setup ();
 
 		// display the desktop frame :
 		new Desktop();
