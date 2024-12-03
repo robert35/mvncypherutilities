@@ -1,0 +1,4 @@
+target/*
+*.class
+/SampleApp/target/
+/mvndecryptUI/target/

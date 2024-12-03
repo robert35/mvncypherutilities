@@ -2,13 +2,23 @@ package com.epsilon777.maven.mvndecryptui.framemvndecryptui;
 
 import com.epsilon777.maven.mvndecryptui.config.I18N;
 import lombok.extern.slf4j.Slf4j;
+import org.xml.sax.*;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyVetoException;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,9 +53,10 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 	String encodedfileasstring="";
 	String decodedfileasstring="";
 
-	JTextArea settingssecurityfileeditor = new JTextArea (10, 160);
-	JTextArea encodedsettingsfileeditor = new JTextArea (50, 60);
+	JTextArea settingssecurityfileeditor = new JTextArea (10, 250);
+	JTextArea encodedsettingsfileeditor = new JTextArea (50, 100);
 	JTextArea decodedsettingsfileeditor = new JTextArea (50, 100);
+	JTextArea erroreditor = new JTextArea (10, 250);
 
 	JScrollPane settingssecurityfileeditorscroll
 						= new JScrollPane( settingssecurityfileeditor,
@@ -60,6 +71,11 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 						JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
 						JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
 
+	JScrollPane erroreditorscroll
+						= new JScrollPane( erroreditor,
+						JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+						JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+
 
 
 
@@ -68,12 +84,13 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 	/**
 	 * Constructor.
 	 */
-	public FrameMvnDecryptUI ( ) {
+	public FrameMvnDecryptUI ( ) throws PropertyVetoException {
 		log.debug ( "START constructor..." );
 
 		setTitle ( I18N.lang ( "frame1.title" ) );
 		setLocation ( new Random ( ).nextInt ( 120 ) + 10, new Random ( ).nextInt ( 120 ) + 10 );
 		setSize ( 2000, 1000 );
+		setMaximum ( true );
 
 		setClosable ( true );
 		setIconifiable ( true );
@@ -92,6 +109,14 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 
 	private void constructPanel ( Container pane ) {
 
+
+		this.decodedfileeditorscroll.setMinimumSize ( new Dimension ( 400, 600 ) );
+		this.encodedfileeditorscroll.setMinimumSize ( new Dimension ( 400, 600 ) );
+		this.settingssecurityfileeditorscroll.setMinimumSize ( new Dimension ( 1600, 200 ) );
+		this.erroreditorscroll.setMinimumSize ( new Dimension ( 1600, 200 ) );
+
+
+
 		listeners.add( this);
 
 		pane.setLayout ( new GridBagLayout (  ) );
@@ -100,39 +125,67 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 
 		gbc= new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx= 1;
-		gbc.gridy=1;
+		gbc.gridx= 0;
+		gbc.gridy=0;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
+		SETTINGSfileChooserbutton.setMargin ( new Insets ( 5, 5, 5, 5 ) );
 		pane.add ( SETTINGSfileChooserbutton, gbc );
 
 		gbc= new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx= 1;
-		gbc.gridy=2;
+		gbc.gridx= 0;
+		gbc.gridy=1;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
+		SETTINGSSECURITYfileChooserbutton.setMargin ( new Insets ( 5, 5, 5, 5 ) );
 		pane.add ( SETTINGSSECURITYfileChooserbutton, gbc );
 
 		gbc= new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx= 1;
+		gbc.gridx= 0;
+		gbc.gridy=2;
+		gbc.gridwidth=3;
+		gbc.gridheight=1;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
+		pane.add( settingssecurityfileeditorscroll, gbc );
+
+
+		gbc= new GridBagConstraints();
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx= 0;
 		gbc.gridy=3;
 		gbc.gridwidth=3;
 		gbc.gridheight=1;
-		pane.add( settingssecurityfileeditorscroll, gbc );
-
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
+		pane.add( erroreditorscroll, gbc );
 
 		//encodedfileeditor.setWrapStyleWord(true);
 		//encodedfileeditor.setLineWrap(false);
 		gbc= new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx= 1;
-		gbc.gridy=4;
+		gbc.gridx= 0;
+		gbc.gridy=5;
 		gbc.gridwidth=1;
-		gbc.gridheight=2;
+		gbc.gridheight=4;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
 		pane.add( encodedfileeditorscroll, gbc );
+
+		gbc= new GridBagConstraints();
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx= 2;
+		gbc.gridy=5;
+		gbc.gridwidth=1;
+		gbc.gridheight=4;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
+		pane.add( decodedfileeditorscroll, gbc );
 
 
 		gbc= new GridBagConstraints();
-		gbc.gridx= 2;
-		gbc.gridy=4;
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx= 1;
+		gbc.gridy=5;
+
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
+		decodebutton.setMargin ( new Insets ( 5, 5, 5, 5 ) );
 		pane.add ( decodebutton, gbc );
 		decodebutton.addActionListener (new ActionListener() {
 			@Override
@@ -146,8 +199,11 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 		});
 
 		gbc= new GridBagConstraints();
-		gbc.gridx= 2;
-		gbc.gridy=5;
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx= 1;
+		gbc.gridy=6;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
+		encodebutton.setMargin ( new Insets ( 5, 5, 5, 5 ) );
 		pane.add ( encodebutton, gbc );
 		encodebutton.addActionListener (new ActionListener() {
 			@Override
@@ -164,8 +220,10 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 
 		gbc= new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx= 1;
-		gbc.gridy=6;
+		gbc.gridx= 0;
+		gbc.gridy=9;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
+		savesettingsbutton.setMargin ( new Insets ( 5, 5, 5, 5 ) );
 		pane.add ( savesettingsbutton, gbc );
 		savesettingsbutton.addActionListener (new ActionListener() {
 			@Override
@@ -179,31 +237,25 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 		});
 
 
-		gbc= new GridBagConstraints();
-		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx= 3;
-		gbc.gridy=4;
-		gbc.gridwidth=1;
-		gbc.gridheight=2;
-		pane.add( decodedfileeditorscroll, gbc );
-
 		settingslabel = new JLabel ( );
 		gbc= new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx= 2;
-		gbc.gridy=1;
-		gbc.gridwidth=2;
-		gbc.gridheight=1;
+		gbc.gridx= 1;
+		gbc.gridy=0;
+		//gbc.gridwidth=2;
+		//gbc.gridheight=1;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
 		pane.add ( settingslabel, gbc );
 
 
 		settingssecuritylabel = new JLabel ( );
 		gbc= new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx= 2;
-		gbc.gridy=2;
-		gbc.gridwidth=2;
-		gbc.gridheight=1;
+		gbc.gridx= 1;
+		gbc.gridy=1;
+		//gbc.gridwidth=2;
+		//gbc.gridheight=1;
+		gbc.insets = new Insets ( 5, 5, 5, 5 );
 		pane.add ( settingssecuritylabel, gbc );
 
 		SETTINGSfileChooserbutton.addActionListener ( new ActionListener ( ) {
@@ -299,7 +351,25 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 	}
 
 	private void ondecodedfileditorchanged ( ) {
+
 		this.decodedfileasstring = this.decodedsettingsfileeditor.getText ();
+
+
+		//validate xml
+		try {
+			validateXMLString(String.valueOf ( this.decodedfileasstring));
+			//this.erroreditor.setBackground(Color.GREEN);
+			this.erroreditor.setForeground(Color.BLACK);
+			this.erroreditor.setText ( "" );
+			this.encodebutton.setEnabled ( true );
+		}
+		catch ( Exception e ) {
+			//this.erroreditor.setBackground(Color.GRAY);
+			this.erroreditor.setForeground(Color.RED);
+			this.erroreditor.setText ( e.getMessage () );
+			this.encodebutton.setEnabled ( false );
+		}
+
 	}
 
 	@Override
@@ -428,6 +498,81 @@ public class FrameMvnDecryptUI extends JInternalFrame implements ConfigurationCh
 	}
 
 
+	public static boolean validateXMLSchema(String xsdPath, String xmlPath){
+
+		try {
+			SchemaFactory factory =
+								SchemaFactory.newInstance( XMLConstants.W3C_XML_SCHEMA_NS_URI);
+			Schema schema = factory.newSchema(new File(xsdPath));
+			Validator validator = schema.newValidator();
+			validator.validate(new StreamSource (new File(xmlPath)));
+		} catch (IOException | SAXException e) {
+			System.out.println("Exception: "+e.getMessage());
+			return false;
+		}
+		return true;
+	}
+
+
+public static boolean validateXMLFile(String xmlPath) throws ParserConfigurationException, SAXException, IOException {
+	SAXParserFactory factory = SAXParserFactory.newInstance();
+	factory.setValidating(true);
+	factory.setNamespaceAware(true);
+
+	SAXParser parser = factory.newSAXParser();
+	parser.setProperty("http://java.sun.com/xml/jaxp/properties/schemaLanguage",
+						"http://www.w3.org/2001/XMLSchema");
+
+	XMLReader reader = parser.getXMLReader();
+
+	reader.setErrorHandler(new ErrorHandler (){
+		public void warning( SAXParseException e) throws SAXException {
+			System.out.println(e.getMessage());
+		}
+
+		public void error(SAXParseException e) throws SAXException {
+			System.out.println(e.getMessage());
+		}
+
+		public void fatalError(SAXParseException e) throws SAXException {
+			System.out.println(e.getMessage());
+		}
+
+	});
+	reader.parse(new InputSource (xmlPath));
+	return true;
+}
+
+
+	public static boolean validateXMLString(String s) throws ParserConfigurationException, SAXException, IOException {
+		SAXParserFactory factory = SAXParserFactory.newInstance();
+		factory.setValidating(true);
+		factory.setNamespaceAware(true);
+
+		SAXParser parser = factory.newSAXParser();
+		parser.setProperty("http://java.sun.com/xml/jaxp/properties/schemaLanguage",
+							"http://www.w3.org/2001/XMLSchema");
+
+		XMLReader reader = parser.getXMLReader();
+
+		reader.setErrorHandler(new ErrorHandler (){
+			public void warning( SAXParseException e) throws SAXException {
+				System.out.println(e.getMessage());
+			}
+
+			public void error(SAXParseException e) throws SAXException {
+				System.out.println(e.getMessage());
+			}
+
+			public void fatalError(SAXParseException e) throws SAXException {
+				System.out.println(e.getMessage());
+			}
+
+		});
+		InputSource is = new InputSource(new StringReader(s));
+		reader.parse(is);
+		return true;
+	}
 
 
 

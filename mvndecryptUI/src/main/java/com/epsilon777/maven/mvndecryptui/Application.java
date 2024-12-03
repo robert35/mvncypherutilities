@@ -1,11 +1,13 @@
 package com.epsilon777.maven.mvndecryptui;
 
+import com.formdev.flatlaf.FlatDarculaLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import lombok.extern.slf4j.Slf4j;
 import  com.epsilon777.maven.mvndecryptui.config.PROP;
 import  com.epsilon777.maven.mvndecryptui.config.I18N;
 import com.formdev.flatlaf.FlatDarkLaf;
 
-
+import java.beans.PropertyVetoException;
 
 /**
  * Application class.
@@ -16,8 +18,7 @@ import com.formdev.flatlaf.FlatDarkLaf;
 public class Application
 {
 
-	public static void main(String[] args)
-	{
+	public static void main(String[] args) throws PropertyVetoException {
 		log.info("Initializing the application...");
 
 		PROP.init();
@@ -25,7 +26,9 @@ public class Application
 		macosConfig();
 
 		log.info("Starting " + PROP.getProperty("app.finalName") + " Application...");
-		FlatDarkLaf.setup();
+		//FlatDarkLaf.setup();
+//		FlatLightLaf.setup ( );
+		FlatDarculaLaf.setup ();
 
 		// display the desktop frame :
 		new Desktop();

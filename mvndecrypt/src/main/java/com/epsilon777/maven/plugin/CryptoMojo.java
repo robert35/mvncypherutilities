@@ -56,6 +56,7 @@ public class CryptoMojo extends AbstractMojo {
 	public void execute ( ) throws MojoExecutionException {
 
 		Properties properties = project.getProperties ( );
+		//Properties properties = project.getActiveProfiles().Properties ( );
 
 		//log.info ( "------------AVANT DECHIFFREMENT--------------" );
 		//showProperties ( properties );
