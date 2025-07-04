@@ -2,6 +2,11 @@
 <component-set>
   <components>
     <component>
+      <role>org.apache.maven.AbstractMavenLifecycleParticipant</role>
+      <implementation>com.epsilon777.maven.extensions.CryptoExtension</implementation>
+      <hint>crypto-extension</hint>
+    </component>
+    <component>
       <role>org.sonatype.plexus.components.sec.dispatcher.SecDispatcher</role>
       <role-hint>mng-4384</role-hint>
       <implementation>org.sonatype.plexus.components.sec.dispatcher.DefaultSecDispatcher</implementation>

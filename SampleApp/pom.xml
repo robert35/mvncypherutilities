@@ -39,19 +39,26 @@
         </profile>
     </profiles>
     <build>
-        <plugins>
-            <plugin>
+        <extensions>
+            <extension>
                 <groupId>com.epsilon777.mvncypherutilities</groupId>
                 <artifactId>mvndecrypt</artifactId>
-                <version>${version}</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>decrypt-properties</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+                <version>1.0</version>
+            </extension>
+        </extensions>
+        <plugins>
+<!--            <plugin>-->
+<!--                <groupId>com.epsilon777.mvncypherutilities</groupId>-->
+<!--                <artifactId>mvndecrypt</artifactId>-->
+<!--                <version>${project.version}</version>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <goals>-->
+<!--                            <goal>decrypt-properties</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -78,7 +85,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.6</version>
+                <version>3.3.0</version>
                 <configuration>
                     <archive>
                         <manifest>

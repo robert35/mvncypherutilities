@@ -6,7 +6,7 @@
     <groupId>com.epsilon777.mvncypherutilities</groupId>
     <artifactId>mvndecryptui</artifactId>
     <packaging>jar</packaging>
-    <version>${project.parent.version}</version>
+    <version>1.0</version>
 
     <name>mvndecrypt UI Maven Mojo from epsilon777</name>
     <url>http://maven.apache.org</url>
@@ -110,7 +110,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>2.6</version>
+                <version>3.3.0</version>
                 <configuration>
                     <archive>
                         <manifest>

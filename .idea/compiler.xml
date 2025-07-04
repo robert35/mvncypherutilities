@@ -7,8 +7,16 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="mvndecryptUI" />
-        <module name="mvndecrypt" />
         <module name="SampleApp" />
+      </profile>
+      <profile name="Annotation profile for mvncypherutilities" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/apache/maven/plugin-tools/maven-plugin-annotations/3.13.1/maven-plugin-annotations-3.13.1.jar" />
+        </processorPath>
+        <module name="mvndecrypt" />
       </profile>
     </annotationProcessing>
   </component>
