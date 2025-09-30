@@ -1,64 +1,328 @@
+# MVNCypherUtilities
 
-I did some tooling to facilitate the work, available here :
-https://github.com/robert35/mvncypherutilities/tree/main
+Extension Maven permettant de déchiffrer automatiquement des propriétés Maven chiffrées avec `settings-security.xml` lors du cycle de vie du build.
 
-(sample app, a maven plugin(pojo), a gui to open / encode/ decode / update / encode / save the settings.xml
+## 📋 Vue d'ensemble
 
+Cette **Maven Core Extension** intercepte le cycle de vie Maven pour déchiffrer les propriétés qui contiennent des tokens chiffrés au format `#{...}`. Elle utilise le mécanisme natif de Maven (`SecDispatcher`) pour décrypter les valeurs stockées dans `~/.m2/settings-security.xml`.
 
+### Cas d'usage
 
-1-edit the settings.xml (a sample is given in the project) and put the encrypted variable like ("#{...} pattern"):
+- Stocker des mots de passe de base de données chiffrés dans les profils Maven
+- Centraliser la gestion des secrets dans `settings.xml` et `settings-security.xml`
+- Déchiffrer automatiquement les propriétés avant l'exécution des plugins (Liquibase, etc.)
 
-    ...<profiles>
+## 🏗️ Structure du projet
+
+```
+MVNCypherUtilities/
+├── pom.xml                          # POM parent (multi-module)
+├── mvndecrypt/                      # Maven Core Extension
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/
+│       │   └── com/epsilon777/maven/extensions/
+│       │       └── CryptoExtension.java
+│       └── resources/
+│           └── META-INF/plexus/
+│               └── components.xml   # Configuration Plexus (CRITIQUE)
+├── mvndecryptui/                    # Interface utilisateur (optionnel)
+└── SampleApp/                       # Application d'exemple
+    ├── pom.xml
+    └── .mvn/
+        └── extensions.xml           # Déclaration de l'extension
+```
+
+## 🔧 Installation et construction
+
+### Prérequis
+
+- Maven 3.8.5 ou supérieur
+- JDK 16+ (pour mvndecrypt)
+- JDK 9+ (pour le projet parent)
+
+### Ordre de construction (IMPORTANT ⚠️)
+
+L'ordre est **critique** car Maven doit pouvoir résoudre le POM parent depuis le repository local lors du chargement de l'extension.
+
+#### 1. Installer le POM parent
+
+```bash
+cd /chemin/vers/MVNCypherUtilities
+mvn clean install -N
+```
+
+**Explication** : L'option `-N` (`--non-recursive`) installe uniquement le POM parent sans construire les modules enfants. Cette étape est indispensable car :
+- Le POM de `mvndecrypt` référence ce parent avec `<relativePath>../pom.xml</relativePath>`
+- Quand Maven charge l'extension depuis `~/.m2/repository`, le chemin relatif n'existe pas
+- Maven doit donc trouver le parent dans le repository local
+
+#### 2. Construire et installer l'extension
+
+```bash
+cd mvndecrypt
+mvn clean install -DskipTests
+```
+
+Cela installe l'extension dans :
+```
+~/.m2/repository/com/epsilon777/mvncypherutilities/mvndecrypt/1.0/
+├── mvndecrypt-1.0.jar
+└── mvndecrypt-1.0.pom
+```
+
+**Vérification** :
+```bash
+# Vérifier que components.xml est bien empaqueté
+jar tf ~/.m2/repository/com/epsilon777/mvncypherutilities/mvndecrypt/1.0/mvndecrypt-1.0.jar | grep components.xml
+```
+
+Résultat attendu : `META-INF/plexus/components.xml`
+
+#### 3. Construire les autres modules (optionnel)
+
+```bash
+cd /chemin/vers/MVNCypherUtilities
+mvn clean install -DskipTests
+```
+
+## 🚀 Utilisation dans un projet
+
+### Configuration de l'extension
+
+Créez le fichier `.mvn/extensions.xml` à la racine de votre projet :
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<extensions>
+    <extension>
+        <groupId>com.epsilon777.mvncypherutilities</groupId>
+        <artifactId>mvndecrypt</artifactId>
+        <version>1.0</version>
+    </extension>
+</extensions>
+```
+
+### Configuration des propriétés chiffrées
+
+#### Dans settings.xml
+
+```xml
+<settings>
+    <profiles>
         <profile>
             <id>production</id>
-            <activation>
-                <!-- do not use activeByDefault option, if a profile is set on the command line, and
-                it will, the profile activated by default is skipped, prefer this way-->
-                <property>
-                    <name>!foobarenvironment</name>
-                </property>
-            </activation>
             <properties>
-                                <mvn.settings.profile.production.foo.bar.datasource.url>#{3DPHAwEc7soHNI4hRTa/j3ETCtfEtlK/WaKPuuwnyKBoQ+tzPirR0Okhy9QEUTgWnwl4clMkO3Iv/j29HAM+WA==}</mvn.settings.profile.production.foo.bar.datasource.url>
-            ...</properties>...
+                <db.password>#{COQLCE3...encrypted...}</db.password>
+                <db.url>jdbc:postgresql://prod-server:5432/mydb</db.url>
+            </properties>
+        </profile>
+    </profiles>
+</settings>
+```
 
-2-get the variable value from the pom using the pojo plugin dependency wich decode the variable at PROCESS_SOURCES phase by default
+#### Dans pom.xml
 
+```xml
+<profiles>
+    <profile>
+        <id>production</id>
+        <properties>
+            <liquibase.password>${db.password}</liquibase.password>
+            <liquibase.url>${db.url}</liquibase.url>
+        </properties>
+    </profile>
+</profiles>
+```
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>com.epsilon777.mvncypherutilities</groupId>
-                <artifactId>mvndecrypt</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>decrypt-properties</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+L'extension déchiffrera automatiquement `#{...}` lors de la phase `afterProjectsRead` du cycle Maven.
 
-3-and in your pom :
+### Format des tokens
 
+- **Token chiffré** : `#{COQLCE3...}` (sera déchiffré)
+- **Token clair** : `password123` (inchangé)
+- **Variable Maven** : `${maven.property}` (résolu normalement par Maven)
 
-            ...<properties>
-                <pom.foo.bar.datasource.url>${mvn.settings.profile.production.foo.bar.datasource.url}</pom.foo.bar.datasource.url>
+## 🔍 Points techniques importants
 
+### Packaging : JAR, pas maven-plugin
 
+```xml
+<packaging>jar</packaging>  <!-- CORRECT pour une Core Extension -->
+```
 
--4 now the decoded value is available by maven for example in the property file in the ressource folder :
+**Pourquoi ?**
+- Une **Maven Core Extension** utilise `AbstractMavenLifecycleParticipant`
+- Elle est chargée avant l'initialisation des plugins Maven
+- Le packaging `maven-plugin` est réservé aux plugins classiques (Mojos)
 
-prop.foo.bar.datasource.url=@pom.foo.bar.datasource.url@
+### Déclaration : extensions.xml, pas pom.xml
 
+**✅ CORRECT** : `.mvn/extensions.xml`
+```xml
+<extensions>
+    <extension>...</extension>
+</extensions>
+```
 
-but unfortunately if someone has access to the jar those variables will be accessible unless you put them on the command line...
+**❌ INCORRECT** : Dans `<build><extensions>` du pom.xml
+```xml
+<build>
+    <extensions>
+        <extension>...</extension>  <!-- Ne fonctionne pas pour une Core Extension -->
+    </extensions>
+</build>
+```
 
+### Fichier components.xml obligatoire
 
-(furthermore you can relocate your settings-security.xml to use the relocation option to redirect to a usb volume...)
+Le fichier `src/main/resources/META-INF/plexus/components.xml` est **obligatoire** pour déclarer les composants Plexus (Dependency Injection de Maven).
 
+Structure minimale :
+```xml
+<component-set>
+  <components>
+    <component>
+      <role>org.apache.maven.AbstractMavenLifecycleParticipant</role>
+      <implementation>com.epsilon777.maven.extensions.CryptoExtension</implementation>
+      <hint>crypto-extension</hint>
+    </component>
+  </components>
+</component-set>
+```
 
-You will also have acces to a GUI editor to encrypt all the file in one time (by hand each password encryption is tedious and you don't remember what it refernces...)
+## 🐛 Dépannage
 
-![alt text](mvndecryptui.png "Title")
+### Erreur : "Failed to read artifact descriptor"
+
+```
+Extension com.epsilon777.mvncypherutilities:mvndecrypt:1.0 or one of its dependencies could not be resolved
+```
+
+**Causes possibles** :
+1. Le POM parent n'est pas installé dans le repository local
+2. Des fichiers `.lastUpdated` polluent le repository local
+3. Le POM de l'extension est corrompu
+
+**Solution** :
+```bash
+# 1. Nettoyer le repository local
+rm -rf ~/.m2/repository/com/epsilon777/mvncypherutilities/mvndecrypt/1.0/
+
+# 2. Réinstaller le parent
+cd /chemin/vers/MVNCypherUtilities
+mvn clean install -N
+
+# 3. Réinstaller l'extension
+cd mvndecrypt
+mvn clean install -DskipTests
+```
+
+### Erreur : "Unresolveable build extension"
+
+Depuis Maven 3.8.5, les extensions non résolues empêchent Maven de démarrer.
+
+**Solutions** :
+1. S'assurer que l'extension est correctement installée (voir ci-dessus)
+2. Utiliser Maven 3.8.4 ou antérieur en attendant de corriger le problème
+3. Supprimer temporairement `.mvn/extensions.xml` pour diagnostiquer
+
+### Fichiers .lastUpdated
+
+Si Maven a tenté de télécharger l'extension depuis un repository distant :
+
+```bash
+# Supprimer les marqueurs d'échec
+rm ~/.m2/repository/com/epsilon777/mvncypherutilities/mvndecrypt/1.0/*.lastUpdated
+
+# Réinstaller
+cd mvndecrypt
+mvn clean install -DskipTests
+```
+
+### L'extension ne se charge pas
+
+Vérifiez que `components.xml` est bien dans le JAR :
+
+```bash
+jar tf ~/.m2/repository/com/epsilon777/mvncypherutilities/mvndecrypt/1.0/mvndecrypt-1.0.jar | grep components.xml
+```
+
+Si absent, vérifiez la configuration des resources dans le POM :
+
+```xml
+<build>
+    <resources>
+        <resource>
+            <directory>src/main/resources</directory>
+            <includes>
+                <include>META-INF/plexus/components.xml</include>
+            </includes>
+        </resource>
+    </resources>
+</build>
+```
+
+### Mode debug
+
+Pour diagnostiquer les problèmes de chargement de l'extension :
+
+```bash
+mvn validate -X 2>&1 | grep -A 30 "CryptoExtension"
+```
+
+## 📝 Notes de développement
+
+### Modifier l'extension
+
+Après modification du code :
+
+```bash
+cd mvndecrypt
+mvn clean install -DskipTests
+# Maven rechargera automatiquement la nouvelle version au prochain build
+```
+
+### Tester dans SampleApp
+
+```bash
+cd SampleApp
+mvn clean validate
+# Regardez les logs pour voir l'extension se charger
+```
+
+Les logs afficheront :
+```
+>> ✅ CryptoExtension loaded : ...
+🔓 Decryption for key 'liquibase.password'
+   Original: #{COQLCE3...}
+   Decrypted: monmotdepasse
+```
+
+### Cycle de vie de l'extension
+
+1. **Maven démarre** → Lit `.mvn/extensions.xml`
+2. **Charge l'extension** → Instancie `CryptoExtension`
+3. **Phase `afterProjectsRead`** → Déchiffre les propriétés
+4. **Plugins exécutés** → Utilisent les propriétés déchiffrées
+
+## 🔐 Sécurité
+
+- Les mots de passe maîtres sont stockés dans `~/.m2/settings-security.xml`
+- Les mots de passe chiffrés sont dans `~/.m2/settings.xml`
+- **Ne jamais** commiter `settings-security.xml` dans Git
+- Les tokens `#{...}` sont déchiffrés en mémoire uniquement
+
+## 📚 Références
+
+- [Maven Extension Guide](https://maven.apache.org/guides/mini/guide-using-extensions.html)
+- [Maven Password Encryption](https://maven.apache.org/guides/mini/guide-encryption.html)
+- [Plexus Container](https://codehaus-plexus.github.io/plexus-containers/)
+
+## 🤝 Contributeur
+
+- Jean-Paul VALLÉE (jeanpaul.vallee1@gmail.com)
+
+## 📄 Licence
+
+Version 1.0 - 2025

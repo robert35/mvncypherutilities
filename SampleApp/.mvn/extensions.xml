@@ -1,0 +1,7 @@
+<extensions>
+    <extension>
+        <groupId>com.epsilon777.mvncypherutilities</groupId>
+        <artifactId>mvndecrypt</artifactId>
+        <version>1.0</version>
+    </extension>
+</extensions>

@@ -39,13 +39,13 @@
         </profile>
     </profiles>
     <build>
-        <extensions>
-            <extension>
-                <groupId>com.epsilon777.mvncypherutilities</groupId>
-                <artifactId>mvndecrypt</artifactId>
-                <version>1.0</version>
-            </extension>
-        </extensions>
+<!--        <extensions>-->
+<!--            <extension>-->
+<!--                <groupId>com.epsilon777.mvncypherutilities</groupId>-->
+<!--                <artifactId>mvndecrypt</artifactId>-->
+<!--                <version>1.0</version>-->
+<!--            </extension>-->
+<!--        </extensions>-->
         <plugins>
 <!--            <plugin>-->
 <!--                <groupId>com.epsilon777.mvncypherutilities</groupId>-->
