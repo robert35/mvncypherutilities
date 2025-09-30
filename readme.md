@@ -1,22 +1,308 @@
 # MVNCypherUtilities
 
-Extension Maven permettant de déchiffrer automatiquement des propriétés Maven chiffrées avec `settings-security.xml` lors du cycle de vie du build.
+Extension Maven Core pour le déchiffrement automatique de propriétés Maven sécurisées.
 
-## 📋 Vue d'ensemble
+## Résumé
 
-Cette **Maven Core Extension** intercepte le cycle de vie Maven pour déchiffrer les propriétés qui contiennent des tokens chiffrés au format `#{...}`. Elle utilise le mécanisme natif de Maven (`SecDispatcher`) pour décrypter les valeurs stockées dans `~/.m2/settings-security.xml`.
+**MVNCypherUtilities** permet de stocker vos mots de passe et secrets Maven de manière chiffrée dans `settings.xml`, puis les déchiffre automatiquement lors du build.
+
+### 🔐 Zéro mot de passe en clair dans vos projets
+
+Plus aucun mot de passe en clair dans vos `pom.xml` ou fichiers de configuration versionnés ! Tous les secrets restent chiffrés et sécurisés dans `~/.m2/settings.xml`.
+
+**Workflow sécurisé :**
+```
+Projet Git (pom.xml)          →  Aucun mot de passe visible ✅
+        ↓
+~/.m2/settings.xml            →  Mots de passe chiffrés #{...} ✅
+        ↓
+~/.m2/settings-security.xml   →  Clé maître chiffrée ✅
+        ↓
+Clé USB (optionnel)           →  Clé maître accessible uniquement aux autorisés ✅
+```
+
+### 💡 Cas d'usage : Déploiements contrôlés avec clé USB
+
+**Problème classique :** Comment autoriser uniquement certaines personnes à déployer en production ?
+
+**Solution élégante :**
+1. **Développeurs** : travaillent avec des mots de passe chiffrés, peuvent build/test localement
+2. **Équipe DevOps** : reçoit une clé USB contenant le mot de passe maître
+3. **Déploiement** : impossible sans brancher la clé USB
+4. **Gestion** : révoquer l'accès = récupérer la clé USB
+
+### 🎨 Interface graphique incluse (mvndecryptui)
+
+L'outil **mvndecryptui** (interface Swing) permet de :
+- Chiffrer/déchiffrer vos mots de passe en masse
+- Gérer vos `settings.xml` et `settings-security.xml` visuellement
+- Mettre à jour tous vos secrets en quelques clics
+- Accessible uniquement avec la clé USB (si configurée)
+
+**En résumé :**
+- Chiffrez vos mots de passe une fois avec `mvn --encrypt-password`
+- Stockez-les sous forme `#{...}` dans `settings.xml`
+- L'extension les déchiffre automatiquement au runtime
+- Compatible avec tous les plugins Maven (Liquibase, Flyway, etc.)
+- **Sécurité maximale** : stockez la clé maître sur USB pour un contrôle d'accès physique
+
+**Exemple concret :**
+```xml
+<!-- pom.xml - Versionné dans Git - AUCUN SECRET -->
+<properties>
+    <db.url>${db.url}</db.url>
+    <db.password>${db.password}</db.password>
+</properties>
+
+<!-- settings.xml - Local uniquement - Secrets chiffrés -->
+<properties>
+    <db.url>jdbc:postgresql://prod:5432/myapp</db.url>
+    <db.password>#{COQLCE3DU6GtcS5P=}</db.password>
+</properties>
+
+<!-- Au runtime, vos plugins reçoivent automatiquement -->
+<db.password>MySecureP@ss123</db.password>
+```
+
+---
+
+## Guide rapide de chiffrement Maven
+
+### En 3 étapes simples
+
+#### Étape 1 : Créer le mot de passe maître
+
+```bash
+mvn --encrypt-master-password
+```
+
+Maven vous demande votre mot de passe maître (choisissez un mot de passe fort) :
+```
+Master password: ********
+```
+
+Maven affiche le mot de passe chiffré :
+```
+{jSMOWnoPFgsHVpMvz5VrIt5kRbzGpI8u+9EF1iFQyJQ=}
+```
+
+**Créez** `~/.m2/settings-security.xml` :
+```xml
+<settingsSecurity>
+    <master>{jSMOWnoPFgsHVpMvz5VrIt5kRbzGpI8u+9EF1iFQyJQ=}</master>
+</settingsSecurity>
+```
+
+---
+
+#### Étape 2 : Chiffrer vos mots de passe
+
+```bash
+mvn --encrypt-password
+```
+
+Maven vous demande le mot de passe à chiffrer :
+```
+Password: ********
+```
+
+Maven affiche le mot de passe chiffré :
+```
+{COQLCE3DU6GtcS5P=}
+```
+
+---
+
+#### Étape 3 : Utiliser dans settings.xml
+
+**Ajoutez** dans `~/.m2/settings.xml` :
+
+```xml
+<settings>
+    <profiles>
+        <profile>
+            <id>production</id>
+            <properties>
+                <!-- Format : #{...} pour que l'extension le déchiffre -->
+                <db.password>#{COQLCE3DU6GtcS5P=}</db.password>
+                <db.url>jdbc:postgresql://prod:5432/mydb</db.url>
+                <db.username>admin</db.username>
+            </properties>
+        </profile>
+    </profiles>
+</settings>
+```
+
+**Important :** Utilisez le format `#{...}` (avec le dièse #) et non `{...}` pour que l'extension détecte et déchiffre le mot de passe.
+
+---
+
+### Workflow complet
+
+```
+┌─────────────────────────────────────┐
+│ 1. Générer master password         │
+│    mvn --encrypt-master-password    │
+└─────────────┬───────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│ 2. Stocker dans                     │
+│    ~/.m2/settings-security.xml      │
+└─────────────┬───────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│ 3. Chiffrer chaque password         │
+│    mvn --encrypt-password           │
+└─────────────┬───────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│ 4. Stocker dans settings.xml        │
+│    avec format #{...}               │
+└─────────────┬───────────────────────┘
+              ↓
+┌─────────────────────────────────────┐
+│ 5. L'extension déchiffre au runtime │
+│    Transparent pour vos plugins     │
+└─────────────────────────────────────┘
+```
+
+---
+
+### Exemple complet
+
+```bash
+# 1. Créer le master password
+$ mvn --encrypt-master-password
+Master password: MySecureM@sterP@ss123
+{jSMOWnoPFgsHVpMvz5VrIt5kRbzGpI8u+9EF1iFQyJQ=}
+
+# 2. Créer settings-security.xml
+$ cat > ~/.m2/settings-security.xml << 'EOF'
+<settingsSecurity>
+    <master>{jSMOWnoPFgsHVpMvz5VrIt5kRbzGpI8u+9EF1iFQyJQ=}</master>
+</settingsSecurity>
+EOF
+
+# 3. Chiffrer le mot de passe de la base de données
+$ mvn --encrypt-password
+Password: MyDbP@ssword456
+{COQLCE3DU6GtcS5P=}
+
+# 4. Utiliser dans settings.xml
+$ cat >> ~/.m2/settings.xml << 'EOF'
+<profile>
+    <id>production</id>
+    <properties>
+        <db.password>#{COQLCE3DU6GtcS5P=}</db.password>
+    </properties>
+</profile>
+EOF
+
+# 5. Build avec l'extension - le mot de passe est déchiffré automatiquement
+$ mvn clean install -Pproduction
+```
+
+---
+
+### Tester le déchiffrement
+
+```bash
+# Vérifier qu'un mot de passe chiffré peut être déchiffré
+mvn --decrypt-password {COQLCE3DU6GtcS5P=}
+```
+
+Si la configuration est correcte, Maven affichera le mot de passe en clair.
+
+---
+
+### Formats de tokens
+
+L'extension supporte deux modes de déchiffrement :
+
+#### Mode 1 : Propriété entièrement chiffrée
+
+```xml
+<properties>
+    <!-- Toute la valeur est un token chiffré -->
+    <db.password>#{COQLCE3DU6GtcS5P=}</db.password>
+</properties>
+```
+
+**Résultat au runtime :** `MySecureP@ss123`
+
+#### Mode 2 : Token chiffré dans une chaîne
+
+```xml
+<properties>
+    <!-- Token chiffré intégré dans une URL -->
+    <liquibase.url>jdbc:postgresql://prod-db:5432/myapp?user=admin&amp;password=#{COQLCE3DU6GtcS5P=}&amp;ssl=true</liquibase.url>
+</properties>
+```
+
+**Résultat au runtime :**
+```
+jdbc:postgresql://prod-db:5432/myapp?user=admin&password=MySecureP@ss123&ssl=true
+```
+
+#### Mode 3 : Plusieurs tokens dans une même chaîne
+
+```xml
+<properties>
+    <!-- Plusieurs secrets différents chiffrés dans la même propriété -->
+    <api.config>https://api.service.com?apiKey=#{8kFmP2nQrT5vW=}&amp;secret=#{zXcV9bNm4LkJ=}&amp;region=eu-west-1</api.config>
+</properties>
+```
+
+**Résultat au runtime :**
+```
+https://api.service.com?apiKey=live_abc123xyz&secret=sk_secretABC456DEF&region=eu-west-1
+```
+
+Chaque token `#{...}` est remplacé indépendamment par sa valeur déchiffrée.
+
+---
+
+## Table des matières
+
+1. [Vue d'ensemble](#vue-densemble)
+2. [Guide rapide de chiffrement Maven](#guide-rapide-de-chiffrement-maven)
+3. [Architecture du projet](#architecture-du-projet)
+4. [Installation et construction](#installation-et-construction)
+5. [Configuration et utilisation](#configuration-et-utilisation)
+6. [Sécurité avancée](#sécurité-avancée)
+7. [Dépannage](#dépannage)
+8. [Références techniques](#références-techniques)
+
+---
+
+## Vue d'ensemble
+
+### Description
+
+MVNCypherUtilities est une **Maven Core Extension** qui intercepte le cycle de vie Maven pour déchiffrer automatiquement les propriétés contenant des tokens chiffrés au format `#{...}`. Elle utilise le mécanisme natif de Maven (`SecDispatcher`) pour décrypter les valeurs stockées dans `~/.m2/settings-security.xml`.
 
 ### Cas d'usage
 
-- Stocker des mots de passe de base de données chiffrés dans les profils Maven
+- Sécuriser les mots de passe de base de données dans les profils Maven
 - Centraliser la gestion des secrets dans `settings.xml` et `settings-security.xml`
-- Déchiffrer automatiquement les propriétés avant l'exécution des plugins (Liquibase, etc.)
+- Déchiffrer automatiquement les propriétés avant l'exécution des plugins (Liquibase, Flyway, etc.)
+- Gérer différents environnements (dev, prod) avec des credentials chiffrés
 
-## 🏗️ Structure du projet
+### Prérequis
+
+- **Maven** : 3.8.5 ou supérieur
+- **JDK** : 16+ (pour mvndecrypt), 9+ (pour le projet parent), 21+ (pour les autres modules)
+
+---
+
+## Architecture du projet
+
+### Structure des modules
 
 ```
 MVNCypherUtilities/
 ├── pom.xml                          # POM parent (multi-module)
+├── build.sh                         # Script de build automatique
 ├── mvndecrypt/                      # Maven Core Extension
 │   ├── pom.xml
 │   └── src/main/
@@ -26,67 +312,255 @@ MVNCypherUtilities/
 │       └── resources/
 │           └── META-INF/plexus/
 │               └── components.xml   # Configuration Plexus (CRITIQUE)
-├── mvndecryptui/                    # Interface utilisateur (optionnel)
+├── mvndecryptui/                    # Interface utilisateur Swing
 └── SampleApp/                       # Application d'exemple
     ├── pom.xml
     └── .mvn/
         └── extensions.xml           # Déclaration de l'extension
 ```
 
-## 🔧 Installation et construction
+### Composants clés
 
-### Prérequis
+| Module | Description | Packaging |
+|--------|-------------|-----------|
+| **mvndecrypt** | Extension Maven Core qui déchiffre les propriétés | `jar` |
+| **mvndecryptui** | Interface graphique pour gérer le chiffrement | `jar` |
+| **SampleApp** | Application de démonstration | `jar` |
 
-- Maven 3.8.5 ou supérieur
-- JDK 16+ (pour mvndecrypt)
-- JDK 9+ (pour le projet parent)
+---
 
-### Ordre de construction (IMPORTANT ⚠️)
+## Installation et construction
 
-L'ordre est **critique** car Maven doit pouvoir résoudre le POM parent depuis le repository local lors du chargement de l'extension.
+### Méthode 1 : Script bash (le plus simple)
 
-#### 1. Installer le POM parent
+Un script bash est fourni pour automatiser tout le processus de build.
 
 ```bash
 cd /chemin/vers/MVNCypherUtilities
-mvn clean install -N
+chmod +x build.sh
+./build.sh
 ```
 
-**Explication** : L'option `-N` (`--non-recursive`) installe uniquement le POM parent sans construire les modules enfants. Cette étape est indispensable car :
+**Actions du script :**
+1. Nettoyage du repository local Maven
+2. Installation du POM parent
+3. Installation de l'extension mvndecrypt
+4. Build complet de tous les modules
+
+**Contenu du script :**
+
+```bash
+#!/bin/bash
+set -e
+
+echo "==> Nettoyage du repository local"
+rm -rf ~/.m2/repository/com/epsilon777/mvncypherutilities/
+
+echo "==> Installation du POM parent"
+mvn clean install -N -DskipTests
+
+echo "==> Installation de l'extension mvndecrypt"
+cd mvndecrypt
+mvn clean install -DskipTests
+cd ..
+
+echo "==> Build complet de tous les modules"
+mvn clean install -DskipTests
+
+echo "✓ Build terminé avec succès"
+```
+
+---
+
+### Méthode 2 : Plugin Maven AntRun
+
+Intégration directe dans le cycle de vie Maven via le plugin `maven-antrun-plugin`.
+
+#### Configuration
+
+Ajoutez dans `MVNCypherUtilities/pom.xml`, section `<build><plugins>` :
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-antrun-plugin</artifactId>
+    <version>3.1.0</version>
+    <inherited>false</inherited>  <!-- IMPORTANT : ne s'exécute QUE dans le parent -->
+    <executions>
+        <execution>
+            <id>build-complete</id>
+            <phase>validate</phase>
+            <goals>
+                <goal>run</goal>
+            </goals>
+            <configuration>
+                <target>
+                    <echo message="==> Nettoyage du repository local"/>
+                    <delete dir="${user.home}/.m2/repository/com/epsilon777/mvncypherutilities/" 
+                            quiet="true" 
+                            failonerror="false"/>
+                    
+                    <echo message="==> Installation du POM parent"/>
+                    <exec executable="mvn" failonerror="true">
+                        <arg value="clean"/>
+                        <arg value="install"/>
+                        <arg value="-N"/>
+                        <arg value="-DskipTests"/>
+                    </exec>
+                    
+                    <echo message="==> Installation de l'extension mvndecrypt"/>
+                    <exec executable="mvn" dir="${project.basedir}/mvndecrypt" failonerror="true">
+                        <arg value="clean"/>
+                        <arg value="install"/>
+                        <arg value="-DskipTests"/>
+                    </exec>
+                    
+                    <echo message="==> Build complet de tous les modules"/>
+                    <exec executable="mvn" failonerror="true">
+                        <arg value="clean"/>
+                        <arg value="install"/>
+                        <arg value="-DskipTests"/>
+                    </exec>
+                    
+                    <echo message=""/>
+                    <echo message="✓ Build terminé avec succès"/>
+                </target>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+#### Utilisation avec profil Maven (recommandé)
+
+Pour éviter que le plugin ne s'exécute à chaque build, créez un profil dédié :
+
+```xml
+<profiles>
+    <profile>
+        <id>full-build</id>
+        <build>
+            <plugins>
+                <!-- Configuration maven-antrun-plugin ici -->
+            </plugins>
+        </build>
+    </profile>
+</profiles>
+```
+
+Activation du profil :
+
+```bash
+cd /chemin/vers/MVNCypherUtilities
+mvn validate -Pfull-build
+```
+
+#### Points d'attention
+
+- **`<inherited>false</inherited>`** : Empêche le plugin de s'exécuter dans les sous-modules (critique)
+- **Phase `validate`** : Exécution au début du cycle Maven
+- **Propriétés Maven** : Utilise `${user.home}` et `${project.basedir}` pour la portabilité
+
+**Avantages :**
+- Intégré au cycle Maven
+- Multi-plateforme (Windows, Linux, macOS)
+- Utilise les propriétés Maven natives
+
+**Inconvénients :**
+- Nécessite modification du POM
+- Risque de récursion si mal configuré
+
+---
+
+### Méthode 3 : Construction manuelle
+
+Pour un contrôle total de chaque étape.
+
+#### Étape 1 : Nettoyer le repository local (recommandé)
+
+```bash
+rm -rf ~/.m2/repository/com/epsilon777/mvncypherutilities/
+```
+
+**Pourquoi ?** Évite les conflits avec d'anciennes versions ou fichiers `.lastUpdated`.
+
+#### Étape 2 : Installer le POM parent
+
+```bash
+cd /chemin/vers/MVNCypherUtilities
+mvn clean install -N -DskipTests
+```
+
+**Option `-N` (--non-recursive)** : Installe uniquement le POM parent sans construire les modules enfants.
+
+**Pourquoi cette étape est critique ?**
 - Le POM de `mvndecrypt` référence ce parent avec `<relativePath>../pom.xml</relativePath>`
 - Quand Maven charge l'extension depuis `~/.m2/repository`, le chemin relatif n'existe pas
-- Maven doit donc trouver le parent dans le repository local
+- Maven doit trouver le parent dans le repository local
 
-#### 2. Construire et installer l'extension
+#### Étape 3 : Installer l'extension mvndecrypt
 
 ```bash
 cd mvndecrypt
 mvn clean install -DskipTests
+cd ..
 ```
 
-Cela installe l'extension dans :
+**Installation dans :**
 ```
 ~/.m2/repository/com/epsilon777/mvncypherutilities/mvndecrypt/1.0/
 ├── mvndecrypt-1.0.jar
 └── mvndecrypt-1.0.pom
 ```
 
-**Vérification** :
+**Vérification :**
+
 ```bash
-# Vérifier que components.xml est bien empaqueté
 jar tf ~/.m2/repository/com/epsilon777/mvncypherutilities/mvndecrypt/1.0/mvndecrypt-1.0.jar | grep components.xml
 ```
 
-Résultat attendu : `META-INF/plexus/components.xml`
+**Résultat attendu :** `META-INF/plexus/components.xml`
 
-#### 3. Construire les autres modules (optionnel)
+#### Étape 4 : Build complet
 
 ```bash
 cd /chemin/vers/MVNCypherUtilities
 mvn clean install -DskipTests
 ```
 
-## 🚀 Utilisation dans un projet
+---
+
+### Méthode 4 : Construction partielle
+
+Pour reconstruire seulement certains modules après modification.
+
+**Uniquement le parent :**
+```bash
+mvn clean install -N -DskipTests
+```
+
+**Uniquement l'extension :**
+```bash
+# Nécessite que le parent soit déjà installé
+cd mvndecrypt
+mvn clean install -DskipTests
+```
+
+**Uniquement SampleApp :**
+```bash
+# Nécessite que le parent et l'extension soient déjà installés
+cd SampleApp
+mvn clean install -DskipTests
+```
+
+**Module spécifique depuis la racine :**
+```bash
+mvn clean install -pl mvndecryptui -DskipTests
+```
+
+---
+
+## Configuration et utilisation
 
 ### Configuration de l'extension
 
@@ -181,13 +655,13 @@ Le fichier `src/main/resources/META-INF/plexus/components.xml` est **obligatoire
 Structure minimale :
 ```xml
 <component-set>
-    <components>
-        <component>
-            <role>org.apache.maven.AbstractMavenLifecycleParticipant</role>
-            <implementation>com.epsilon777.maven.extensions.CryptoExtension</implementation>
-            <hint>crypto-extension</hint>
-        </component>
-    </components>
+  <components>
+    <component>
+      <role>org.apache.maven.AbstractMavenLifecycleParticipant</role>
+      <implementation>com.epsilon777.maven.extensions.CryptoExtension</implementation>
+      <hint>crypto-extension</hint>
+    </component>
+  </components>
 </component-set>
 ```
 

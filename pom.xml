@@ -17,14 +17,14 @@
     <properties>
         <main.basedir>${project.basedir}</main.basedir>
         <com.epsilon777.mvncypherutilities.version>1.0</com.epsilon777.mvncypherutilities.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>22</java.version>
+        <java.version>21</java.version>
         <targetJdk>${java.version}</targetJdk>
         <jdk.version>1.9</jdk.version>
-        <maven.compiler.source>9</maven.compiler.source>
-        <maven.compiler.target>9</maven.compiler.target>
-    </properties>
 
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
     <developers>
         <developer>
             <name>Jean-Paul VALLEE</name>
@@ -143,13 +143,12 @@
                     </configuration>
                 </plugin>
                 <plugin>
-                    <!-- Need at least 2.22.0 to support JUnit 5 platform -->
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.3.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.10.1</version>
+                    <version>3.13.0</version> <!-- Version récente qui supporte Java 22 -->
                 </plugin>
                 <plugin>
                     <artifactId>maven-javadoc-plugin</artifactId>
@@ -252,6 +251,7 @@
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
     <repositories>
@@ -277,5 +277,60 @@
         <profile>
             <id>development</id>
         </profile>
+            <profile>
+                <id>full-build</id>
+                <build>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-antrun-plugin</artifactId>
+                            <version>3.1.0</version>
+                            <inherited>false</inherited>  <!-- NE PAS hériter dans les sous-modules -->
+                            <executions>
+                                <execution>
+                                    <id>build-complete</id>
+                                    <phase>validate</phase>
+                                    <goals>
+                                        <goal>run</goal>
+                                    </goals>
+                                    <configuration>
+                                        <target>
+                                            <echo message="==> Nettoyage du repository local"/>
+                                            <delete dir="${user.home}/.m2/repository/com/epsilon777/mvncypherutilities/"
+                                                    quiet="true"
+                                                    failonerror="false"/>
+
+                                            <echo message="==> Installation du POM parent"/>
+                                            <exec executable="mvn" failonerror="true">
+                                                <arg value="clean"/>
+                                                <arg value="install"/>
+                                                <arg value="-N"/>
+                                                <arg value="-DskipTests"/>
+                                            </exec>
+
+                                            <echo message="==> Installation de l'extension mvndecrypt"/>
+                                            <exec executable="mvn" dir="${project.basedir}/mvndecrypt" failonerror="true">
+                                                <arg value="clean"/>
+                                                <arg value="install"/>
+                                                <arg value="-DskipTests"/>
+                                            </exec>
+
+                                            <echo message="==> Build complet de tous les modules"/>
+                                            <exec executable="mvn" failonerror="true">
+                                                <arg value="clean"/>
+                                                <arg value="install"/>
+                                                <arg value="-DskipTests"/>
+                                            </exec>
+
+                                            <echo message=""/>
+                                            <echo message="✓ Build terminé avec succès"/>
+                                        </target>
+                                    </configuration>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </build>
+            </profile>
     </profiles>
 </project>
