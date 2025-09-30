@@ -181,13 +181,13 @@ Le fichier `src/main/resources/META-INF/plexus/components.xml` est **obligatoire
 Structure minimale :
 ```xml
 <component-set>
-  <components>
-    <component>
-      <role>org.apache.maven.AbstractMavenLifecycleParticipant</role>
-      <implementation>com.epsilon777.maven.extensions.CryptoExtension</implementation>
-      <hint>crypto-extension</hint>
-    </component>
-  </components>
+    <components>
+        <component>
+            <role>org.apache.maven.AbstractMavenLifecycleParticipant</role>
+            <implementation>com.epsilon777.maven.extensions.CryptoExtension</implementation>
+            <hint>crypto-extension</hint>
+        </component>
+    </components>
 </component-set>
 ```
 
@@ -308,10 +308,87 @@ Les logs afficheront :
 
 ## 🔐 Sécurité
 
+### Stockage des mots de passe
+
 - Les mots de passe maîtres sont stockés dans `~/.m2/settings-security.xml`
 - Les mots de passe chiffrés sont dans `~/.m2/settings.xml`
 - **Ne jamais** commiter `settings-security.xml` dans Git
 - Les tokens `#{...}` sont déchiffrés en mémoire uniquement
+
+### 💾 Stockage du mot de passe maître sur clé USB (recommandé)
+
+Pour une sécurité maximale, vous pouvez stocker le mot de passe maître sur un support amovible (clé USB). Cette approche garantit que le déchiffrement ne fonctionne **que lorsque la clé USB est branchée**, limitant ainsi les accès aux personnes autorisées (ex: équipe de déploiement).
+
+#### Configuration avec relocation
+
+**Étape 1** : Créer le mot de passe maître et le stocker sur la clé USB
+
+```bash
+# Générer le mot de passe maître chiffré
+mvn --encrypt-master-password
+# Entrez votre mot de passe maître quand Maven vous le demande
+# Maven affichera quelque chose comme : {jSMOWnoPFgsHVpMvz5VrIt5kRbzGpI8u+9EF1iFQyJQ=}
+```
+
+**Étape 2** : Créer `settings-security.xml` sur la clé USB
+
+Montez votre clé USB (ex: `/Volumes/mySecureUsb` sur macOS, `/media/usb` sur Linux, `E:\` sur Windows)
+
+Créez le fichier sur la clé USB :
+
+```bash
+# Exemple macOS
+mkdir -p /Volumes/mySecureUsb/maven-security
+nano /Volumes/mySecureUsb/maven-security/settings-security.xml
+```
+
+Contenu du fichier :
+```xml
+<settingsSecurity>
+    <master>{jSMOWnoPFgsHVpMvz5VrIt5kRbzGpI8u+9EF1iFQyJQ=}</master>
+</settingsSecurity>
+```
+
+**Étape 3** : Créer un fichier de redirection dans `~/.m2/`
+
+Créez `~/.m2/settings-security.xml` avec une **relocation** pointant vers la clé USB :
+
+```xml
+<settingsSecurity>
+    <relocation>/Volumes/mySecureUsb/maven-security/settings-security.xml</relocation>
+</settingsSecurity>
+```
+
+Exemples de chemins selon les systèmes :
+- **macOS** : `/Volumes/mySecureUsb/maven-security/settings-security.xml`
+- **Linux** : `/media/usb/maven-security/settings-security.xml` ou `/mnt/usb/...`
+- **Windows** : `E:/maven-security/settings-security.xml`
+
+**Étape 4** : Tester la configuration
+
+```bash
+# Sans la clé USB branchée - ÉCHEC attendu
+mvn --encrypt-password test123
+# Erreur : FileNotFoundException sur le chemin de la clé USB
+
+# Avec la clé USB branchée - SUCCÈS attendu
+mvn --encrypt-password test123
+# Résultat : {COQLCE3DU6GtcS5P=}
+```
+
+#### Avantages de cette approche
+
+✅ **Sécurité physique** : Le mot de passe maître n'est jamais sur le disque dur
+✅ **Contrôle d'accès** : Seuls ceux qui ont la clé USB peuvent déployer
+✅ **Audit trail** : La clé USB peut être stockée en lieu sûr et tracée
+✅ **Révocation facile** : Retirer la clé = désactiver les déploiements
+
+#### Points d'attention
+
+⚠️ **Chemin absolu obligatoire** : La relocation doit utiliser un chemin absolu
+⚠️ **Point de montage stable** : Assurez-vous que la clé USB monte toujours au même endroit
+⚠️ **Backup** : Conservez une copie sécurisée du `settings-security.xml` de la clé USB
+⚠️ **Chiffrement de la clé USB** : Pour une sécurité maximale, utilisez une clé USB chiffrée (BitLocker, LUKS, FileVault)
 
 ## 📚 Références
 
